@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSS Vulnerability Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1e40af;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 15px;
+            text-align: center;
+            font-size: 28px;
+        }
+        .search-form {
+            margin: 25px 0;
+            display: flex;
+        }
+        .search-form input {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px 0 0 6px;
+        }
+        .search-form button {
+            padding: 12px 25px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 0 6px 6px 0;
+            font-weight: bold;
+        }
+        .search-form button:hover {
+            background-color: #1d4ed8;
+        }
+        .result-box {
+            border: 1px solid #d1d5db;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+            min-height: 100px;
+        }
+        .example-box {
+            background-color: #dbeafe;
+            border-left: 5px solid #2563eb;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .example-box h3 {
+            color: #1e40af;
+            margin-top: 0;
+            font-size: 22px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .example-item {
+            margin-bottom: 20px;
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #bfdbfe;
+        }
+        .example-item p strong {
+            color: #1e40af;
+            font-size: 18px;
+        }
+        code {
+            display: block;
+            background-color: #f1f5f9;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            color: #ef4444;
+            font-family: monospace;
+            font-size: 16px;
+            word-break: break-all;
+            border-left: 3px solid #ef4444;
+        }
+        .example-item button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .example-item button:hover {
+            background-color: #2563eb;
+        }
+        .warning {
+            background-color: #fff7ed;
+            border-left: 5px solid #f59e0b;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .warning h3 {
+            color: #b45309;
+            margin-top: 0;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>XSS Vulnerability Demo</h1>
+        
+        <div class="search-form">
+            <input type="text" id="searchInput" placeholder="Enter search term (or XSS payload)...">
+            <button onclick="performSearch()">Search</button>
+        </div>
+        
+        <div id="searchResults" class="result-box">
+            <!-- Search results will appear here -->
+            <p>Enter a search term above to begin.</p>
+        </div>
+        
+        <div class="example-box">
+            <h3>Try These XSS Payloads:</h3>
+            
+            <div class="example-item">
+                <p><strong>Basic Script Tag:</strong></p>
+                <code>&lt;script&gt;alert('XSS Attack')&lt;/script&gt;</code>
+                <p><button onclick="tryExample(1)">Try this</button></p>
+            </div>
+            
+            <div class="example-item">
+                <p><strong>Event Handler:</strong></p>
+                <code>&lt;img src="x" onerror="alert('XSS Attack')"&gt;</code>
+                <p><button onclick="tryExample(2)">Try this</button></p>
+            </div>
+            
+            <div class="example-item">
+                <p><strong>JavaScript URI:</strong></p>
+                <code>&lt;a href="javascript:alert('XSS Attack')"&gt;Click me&lt;/a&gt;</code>
+                <p><button onclick="tryExample(3)">Try this</button></p>
+            </div>
+        </div>
+        
+        <div class="warning">
+            <h3>Educational Purpose Only</h3>
+            <p>This page is intentionally vulnerable to XSS attacks for educational purposes. In a real application, user input should be properly sanitized before being inserted into the DOM.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Function to get URL parameters
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+        
+        // Check if there's a search query in the URL
+        window.onload = function() {
+            const q = getQueryParam('q');
+            if (q) {
+                document.getElementById('searchInput').value = q;
+                performSearch();
+            }
+        }
+        
+        // Function to perform search - VULNERABLE TO XSS
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value;
+            const resultsContainer = document.getElementById('searchResults');
+            
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.set('q', searchTerm);
+            window.history.pushState({}, '', url);
+            
+            // VULNERABLE: Directly inserting user input into innerHTML
+            resultsContainer.innerHTML = `
+                <h3>Search Results for: ${searchTerm}</h3>
+                <p>No products found matching your search criteria.</p>
+                <p>Try searching for different keywords or browse our categories.</p>
+            `;
+        }
+        
+        // Function to try example XSS payloads
+        function tryExample(exampleNum) {
+            let payload = '';
+            
+            switch(exampleNum) {
+                case 1:
+                    payload = `<script>alert("XSS Attack")<\/script>`;
+                    break;
+                case 2:
+                    payload = `<img src="x" onerror="alert('XSS Attack')">`;
+                    break;
+                case 3:
+                    payload = `<a href="javascript:alert('XSS Attack')">Click me</a>`;
+                    break;
+            }
+            
+            document.getElementById('searchInput').value = payload;
+            performSearch();
+        }
+    </script>
+</body>
+</html> 
